@@ -1,6 +1,6 @@
 # ROM Statistics and ROM Identification
-ro.romstats.url=http://servername/subfolders/
-ro.romstats.name=Custom Rom Name
+ro.romstats.url=http://team.blissroms.com/RomStats/website/submit
+ro.romstats.name=BlissPop
 ro.romstats.version=v1.0.0
 # ro.romstats.tframe=6
 # ro.romstats.askfirst=1
