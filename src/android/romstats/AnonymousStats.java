@@ -55,13 +55,10 @@ public class AnonymousStats extends PreferenceActivity implements
 	private static final String PREF_VIEW_STATS = "pref_view_stats";
 	private static final String PREF_LAST_REPORT_ON = "pref_last_report_on";
 	private static final String PREF_REPORT_INTERVAL = "pref_reporting_interval";
-	private static final String PREF_ABOUT = "pref_about";
-	private static final String PREF_WEBSITE = "pref_website";
 
 	private CheckBoxPreference mEnableReporting;
 	private CheckBoxPreference mPersistentOptout;
 	private Preference mViewStats;
-	//private Preference btnUninstall;
 
 	private Dialog mOkDialog;
 	private boolean mOkClicked;
@@ -86,7 +83,6 @@ public class AnonymousStats extends PreferenceActivity implements
 		mEnableReporting = (CheckBoxPreference) prefSet.findPreference(Const.ANONYMOUS_OPT_IN);
 		mPersistentOptout = (CheckBoxPreference) prefSet.findPreference(Const.ANONYMOUS_OPT_OUT_PERSIST);
 		mViewStats = (Preference) prefSet.findPreference(PREF_VIEW_STATS);
-		//btnUninstall = prefSet.findPreference(PREF_UNINSTALL);
 
 		boolean firstBoot = mPrefs.getBoolean(Const.ANONYMOUS_FIRST_BOOT, true);
         if (mEnableReporting.isChecked() && firstBoot) {
@@ -95,26 +91,6 @@ public class AnonymousStats extends PreferenceActivity implements
             mPrefs.edit().putLong(Const.ANONYMOUS_LAST_CHECKED, 1).apply();
             ReportingServiceManager.launchService(this);
         }
-        
-		Preference mPrefAboutVersion = (Preference) prefSet.findPreference(PREF_ABOUT);
-		String versionString = getResources().getString(R.string.app_name);
-		try {
-			versionString += " v" + getPackageManager().getPackageInfo(getBaseContext().getPackageName(), 0).versionName;
-		} catch (Exception e) {
-			// nothing
-		}
-		mPrefAboutVersion.setTitle(versionString);
-		
-		Preference aboutWesbite = (Preference) prefSet.findPreference(PREF_WEBSITE);
-		aboutWesbite.setOnPreferenceClickListener(new OnPreferenceClickListener() {
-			@Override
-			public boolean onPreferenceClick(Preference preference) {
-    			Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(getResources().getString(R.string.pref_info_website_url)));
-    			startActivity(intent);
-				
-				return false;
-			}
-		});
 		
 		Preference mPrefHolder;
 		/* Experimental feature 2 */
@@ -142,73 +118,6 @@ public class AnonymousStats extends PreferenceActivity implements
 		mPrefHolder = prefSet.findPreference(PREF_REPORT_INTERVAL);
 		int tFrame = (int) Utilities.getTimeFrame();
 		mPrefHolder.setSummary(getResources().getQuantityString(R.plurals.reporting_interval_days, tFrame, tFrame));
-		
-		// show app signature
-		if (true) {
-			String appSignature = "";
-			PackageInfo packageInfo = null;
-
-			try {
-				packageInfo = this.getPackageManager().getPackageInfo(this.getPackageName(), PackageManager.GET_SIGNATURES);
-			} catch (NameNotFoundException e) {
-				e.printStackTrace();
-			}
-			Signature[] signatures = packageInfo.signatures;
-			
-			/*
-			Log.d("TAG", "Internal signature: " + signatures[0].toCharsString());
-
-			InputStream input = new ByteArrayInputStream(signatures[0].toByteArray());
-
-			CertificateFactory cf = null;
-			try {
-				cf = CertificateFactory.getInstance("X509");
-			} catch (CertificateException e) {
-				e.printStackTrace();
-			}
-			X509Certificate c = null;
-			try {
-				c = (X509Certificate) cf.generateCertificate(input);
-			} catch (CertificateException e) {
-				e.printStackTrace();
-			}
-
-			try {
-				MessageDigest md = MessageDigest.getInstance("SHA1");
-				byte[] publicKey = md.digest(c.getPublicKey().getEncoded());
-
-				StringBuffer hexString = new StringBuffer();
-				for (int i = 0; i < publicKey.length; i++) {
-					String appendString = Integer.toHexString(0xFF & publicKey[i]);
-					if (appendString.length() == 1) {
-						hexString.append("0");
-					}
-					if (hexString.length() > 0) {
-						hexString.append(":");
-					}
-					hexString.append(appendString);
-				}
-				
-				appSignature = hexString.toString();
-			} catch (NoSuchAlgorithmException e1) {
-				e1.printStackTrace();
-			}*/
-			
-			if (Const.CERT_PUB_KEY.equals(new String(signatures[0].toChars()))) {
-				appSignature = "Valid";
-			} else {
-				appSignature = "Invalid";
-			}
-			
-			mPrefHolder = prefSet.findPreference("pref_app_signature");
-			mPrefHolder.setSummary(appSignature);
-		}
-
-		// Cancel notification on app open, in case it doesn't AutoCancel
-		NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-		nm.cancel(Utilities.NOTIFICATION_ID);
-		
-		Utilities.checkIconVisibility(this);
 	}
 
 	@SuppressWarnings("deprecation")
@@ -309,110 +218,4 @@ public class AnonymousStats extends PreferenceActivity implements
 			startActivity(new Intent(Intent.ACTION_VIEW, uri));
 		}
 	}
-
-	@Override
-	public boolean onCreateOptionsMenu(Menu menu) {
-		MenuInflater inflater = getMenuInflater();
-		inflater.inflate(R.menu.menu, menu);
-
-		// remove Uninstall option if RomStats is installed as System App
-		try {
-			PackageManager pm = getPackageManager();
-			ApplicationInfo appInfo = pm.getApplicationInfo(getPackageName(), 0);
-
-			// Log.d(Utilities.TAG, "App is installed in: " +
-			// appInfo.sourceDir);
-			// Log.d(Utilities.TAG, "App is system: " + (appInfo.flags &
-			// ApplicationInfo.FLAG_SYSTEM));
-
-			if ((appInfo.sourceDir.startsWith("/data/app/"))
-					&& (appInfo.flags & ApplicationInfo.FLAG_SYSTEM) == 0) {
-				// installed as user app, ok
-			} else {
-				menu.findItem(R.id.uninstall).setVisible(false);
-			}
-		} catch (Exception e) {
-			menu.findItem(R.id.uninstall).setVisible(false);
-		}
-
-		return super.onCreateOptionsMenu(menu);
-	}
-
-	@Override
-	public boolean onOptionsItemSelected(MenuItem item) {
-		switch (item.getItemId()) {
-		case R.id.learn_more:
-			new AlertDialog.Builder(this)
-				.setMessage(this.getResources().getString(R.string.anonymous_statistics_warning))
-				.setTitle(R.string.anonymous_statistics_warning_title)
-				.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
-					public void onClick(DialogInterface dialog, int which) {
-						dialog.dismiss();
-					}
-				}).show();
-			break;
-		case R.id.uninstall:
-			uninstallSelf();
-			break;
-		case R.id.hideicon:
-			DialogInterface.OnClickListener dialogClickListener = new DialogInterface.OnClickListener() {
-				@Override
-				public void onClick(DialogInterface dialog, int which) {
-					switch (which) {
-					case DialogInterface.BUTTON_POSITIVE:
-						// Yes button clicked
-						hideLauncherIcon();
-						dialog.dismiss();
-						break;
-
-					case DialogInterface.BUTTON_NEGATIVE:
-						// No button clicked
-						dialog.dismiss();
-						break;
-					}
-				}
-			};
-
-			AlertDialog.Builder builder = new AlertDialog.Builder(this);
-			builder
-					.setTitle(R.string.app_name)
-					.setIcon(R.drawable.ic_launcher)
-					.setMessage(R.string.pref_hideicon_desc)
-					.setPositiveButton(android.R.string.ok, dialogClickListener)
-					.setNegativeButton(android.R.string.cancel, dialogClickListener)
-					.setCancelable(true)
-					.show();
-
-			break;
-		}
-
-		return super.onOptionsItemSelected(item);
-	}
-	
-	public void uninstallSelf() {
-		Intent intent = new Intent(Intent.ACTION_DELETE);
-		intent.setData(Uri.parse("package:" + getPackageName()));
-		startActivity(intent);
-	}
-	
-	public void hideLauncherIcon() {
-		PackageManager p = getPackageManager();
-		p.setComponentEnabledSetting(getComponentName(), PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP);
-
-		try {
-			File sdCard = Environment.getExternalStorageDirectory();
-			File dir = new File (sdCard.getAbsolutePath() + "/.ROMStats");
-			dir.mkdirs();
-			File cookieFile = new File(dir, "hide_icon");
-			
-			FileOutputStream optOutCookie = new FileOutputStream(cookieFile);
-			OutputStreamWriter oStream = new OutputStreamWriter(optOutCookie);
-	        oStream.write("true");
-	        oStream.close();
-	        optOutCookie.close();
-		} catch (IOException e) {
-			Log.e(Const.TAG, "Error while writing 'hide_icon' file to sdcard", e);
-		}
-	}
-
 }
